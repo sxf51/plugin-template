@@ -1,0 +1,192 @@
+/*
+ * Page styling.
+ *
+ * The host sets data-theme="dark" or "light" on <html> before first paint and
+ * updates it whenever the reader switches, so define both palettes as custom
+ * properties and let the attribute pick. Never hard-code a colour: a page that
+ * only looks right in light mode is half broken.
+ *
+ * The dashboard's own design tokens are not in scope here - the page is on a
+ * separate origin with its own document. Declare what you need.
+ */
+
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --text: #1b1f27;
+  --muted: #6b7280;
+  --border: #e3e6ec;
+  --accent: #2f6feb;
+  --danger: #c0392b;
+}
+
+[data-theme='dark'] {
+  --bg: #14161a;
+  --surface: #1c1f25;
+  --text: #e8eaee;
+  --muted: #9aa1ad;
+  --border: #2b2f37;
+  --accent: #6ea0ff;
+  --danger: #e26d5c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.55 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.head h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.status {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 4px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+main {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  margin-top: 16px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+input[type='text'],
+textarea,
+select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+button {
+  padding: 7px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+button.link {
+  background: none;
+  border: none;
+  padding: 0 6px;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+button.link.danger {
+  color: var(--danger);
+}
+
+.notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.notes li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.notes li span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream {
+  margin: 0;
+  padding: 10px;
+  min-height: 120px;
+  max-height: 200px;
+  overflow: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.stream.small {
+  min-height: 80px;
+}
+
+img#badge {
+  border-radius: 10px;
+  max-width: 100%;
+  height: auto;
+}

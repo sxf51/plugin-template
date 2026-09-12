@@ -1,0 +1,108 @@
+<!doctype html>
+<!--
+  The page entry document.
+
+  Four rules that cause most blank pages:
+
+  1. Never write a script tag for __bridge.js yourself. The host inserts one
+     when it serves this file. Adding your own can load the bridge twice.
+  2. Never write a literal head tag inside a comment. The host injects the
+     bridge right after the first one it finds in the source text, comments
+     included - so a decorative one here would swallow the bridge and leave
+     the page with no way to talk to the backend at all.
+  3. No external resources. The page CSP allows only this origin, so a CDN
+     script, a Google font or a remote image is blocked silently, and the
+     static review records it as a finding.
+  4. Everything reaches the backend through window.CapstonePluginPage. The page
+     runs in a sandboxed iframe on an opaque origin with connect-src 'none', so
+     it cannot fetch anything by itself - by design, so there is no route out
+     for data that does not pass through the host.
+
+  Visible text is keyed with data-i18n and filled in from app.js, because the
+  reader's language can change while the page is open.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plugin Template Console</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="head">
+      <h1 data-i18n="title">Plugin Template Console</h1>
+      <p class="muted" data-i18n="subtitle">Every page-bridge method, once.</p>
+      <div class="status">
+        <span id="who" class="pill">—</span>
+        <span id="backend" class="pill">—</span>
+        <span id="locale" class="pill">—</span>
+      </div>
+    </header>
+
+    <main>
+      <!-- apiPost -->
+      <section class="card">
+        <h2 data-i18n="composeTitle">Write a note</h2>
+        <p class="muted" data-i18n="composeHint">bridge.apiPost('notes', {...})</p>
+        <input id="note-title" type="text" data-i18n-placeholder="titlePlaceholder" />
+        <textarea id="note-body" rows="3" data-i18n-placeholder="bodyPlaceholder"></textarea>
+        <div class="row">
+          <select id="note-tag"></select>
+          <button id="save" type="button" data-i18n="save">Save</button>
+        </div>
+      </section>
+
+      <!-- apiGet, apiPut, apiDelete -->
+      <section class="card">
+        <h2 data-i18n="listTitle">Your notes</h2>
+        <p class="muted" data-i18n="listHint">apiGet('recent') · apiPut('notes/update') · apiDelete('notes/delete')</p>
+        <ul id="notes" class="notes"></ul>
+        <button id="refresh" type="button" class="ghost" data-i18n="refresh">Refresh</button>
+      </section>
+
+      <!-- upload, list, download, delete -->
+      <section class="card">
+        <h2 data-i18n="uploadTitle">Attachments</h2>
+        <p class="muted" data-i18n="uploadHint">upload('attachments') · download('attachments/file') · apiDelete('attachments/delete')</p>
+        <input id="file" type="file" />
+        <span id="upload-result" class="muted"></span>
+        <ul id="attachments" class="notes"></ul>
+      </section>
+
+      <!-- dataUrl and download -->
+      <section class="card">
+        <h2 data-i18n="binaryTitle">Binaries</h2>
+        <p class="muted" data-i18n="binaryHint">bridge.dataUrl('badge') · bridge.download('export')</p>
+        <img id="badge" alt="" width="240" height="72" />
+        <div class="row">
+          <button id="reload-badge" type="button" class="ghost" data-i18n="reloadBadge">Reload badge</button>
+          <button id="export" type="button" class="ghost" data-i18n="export">Download JSON</button>
+        </div>
+      </section>
+
+      <!-- subscribeSSE and unsubscribeSSE -->
+      <section class="card">
+        <h2 data-i18n="streamTitle">Activity stream</h2>
+        <p class="muted" data-i18n="streamHint">bridge.subscribeSSE('events', handlers)</p>
+        <pre id="stream" class="stream"></pre>
+        <div class="row">
+          <button id="stream-start" type="button" class="ghost" data-i18n="streamStart">Start</button>
+          <button id="stream-stop" type="button" class="ghost" data-i18n="streamStop">Stop</button>
+        </div>
+      </section>
+
+      <!-- run-tool and notify -->
+      <section class="card">
+        <h2 data-i18n="toolTitle">Run a tool</h2>
+        <p class="muted" data-i18n="toolHint">The host's tool executor, no LLM turn</p>
+        <pre id="tool-out" class="stream small"></pre>
+        <div class="row">
+          <button id="run-status" type="button" class="ghost" data-i18n="runStatus">template_status_tool</button>
+          <button id="ping" type="button" class="ghost" data-i18n="ping">Ping</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

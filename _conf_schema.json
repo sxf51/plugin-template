@@ -1,0 +1,184 @@
+{
+  "llm": {
+    "type": "object",
+    "label": { "zh": "语言模型", "en": "Language model" },
+    "description": {
+      "zh": "宿主按 插件覆盖值 > 所选 provider > 全局默认 的顺序解析出一份本插件专用配置",
+      "en": "The host resolves a plugin-private config as plugin override > selected provider > global default"
+    },
+    "items": {
+      "provider": {
+        "type": "string",
+        "label": { "zh": "服务商", "en": "Provider" },
+        "hint": {
+          "zh": "留空使用全局默认。下拉列表来自这套部署实际配置的 provider，不是写死在本文件里的",
+          "en": "Empty uses the global default. The list comes from what this deployment actually has configured, not from this file"
+        },
+        "default": "",
+        "options_source": "llm.providers"
+      },
+      "model": {
+        "type": "string",
+        "label": { "zh": "模型", "en": "Model" },
+        "hint": {
+          "zh": "留空则沿用所选 provider 的模型；候选随上面选的 provider 联动",
+          "en": "Empty keeps the selected provider's model; the choices follow the provider picked above"
+        },
+        "default": "",
+        "options_source": "llm.models",
+        "depends_on": "provider"
+      },
+      "temperature": {
+        "type": "float",
+        "label": { "zh": "温度", "en": "Temperature" },
+        "default": 0.2
+      }
+    }
+  },
+
+  "notes": {
+    "type": "object",
+    "label": { "zh": "笔记设置", "en": "Note settings" },
+    "items": {
+      "keep_last": {
+        "type": "int",
+        "label": { "zh": "保留条数", "en": "Notes to retain" },
+        "hint": {
+          "zh": "超出的旧笔记由 /actions/prune 清理",
+          "en": "Older notes beyond this are removed by the prune action"
+        },
+        "default": 50
+      },
+      "default_tag": {
+        "type": "string",
+        "label": { "zh": "默认标签", "en": "Default tag" },
+        "default": "general",
+        "options": ["general", "idea", "todo"],
+        "option_labels": {
+          "general": { "zh": "常规", "en": "General" },
+          "idea": { "zh": "灵感", "en": "Idea" },
+          "todo": { "zh": "待办", "en": "To-do" }
+        }
+      },
+      "relevance_threshold": {
+        "type": "float",
+        "label": { "zh": "相关度阈值", "en": "Relevance threshold" },
+        "hint": {
+          "zh": "子智能体投票时低于该分数判为 reject",
+          "en": "The voting subagent rejects anything scoring below this"
+        },
+        "default": 0.5
+      },
+      "archive_enabled": {
+        "type": "bool",
+        "label": { "zh": "归档已清理的笔记", "en": "Archive pruned notes" },
+        "default": true
+      },
+      "summary_prompt": {
+        "type": "text",
+        "label": { "zh": "摘要提示词", "en": "Summary prompt" },
+        "hint": {
+          "zh": "多行文本，发给模型前会拼上笔记正文",
+          "en": "Multi-line; the note body is appended before it reaches the model"
+        },
+        "default": "Summarise the following notes into a short outline. Reply in the language of the notes."
+      }
+    }
+  },
+
+  "credentials": {
+    "type": "object",
+    "label": { "zh": "凭据", "en": "Credentials" },
+    "description": {
+      "zh": "密钥请走环境变量。secret 字段只是在表单里打码，落盘的仍是明文",
+      "en": "Prefer environment variables. A secret field only masks the input; it is stored in clear text"
+    },
+    "items": {
+      "api_key_env": {
+        "type": "string",
+        "label": { "zh": "密钥环境变量名", "en": "API key environment variable" },
+        "default": "TEMPLATE_PLUGIN_API_KEY"
+      },
+      "shared_token": {
+        "type": "string",
+        "label": { "zh": "共享令牌", "en": "Shared token" },
+        "secret": true,
+        "default": ""
+      }
+    }
+  },
+
+  "starter_tags": {
+    "type": "list",
+    "label": { "zh": "可选标签", "en": "Available tags" },
+    "hint": {
+      "zh": "list 渲染成一串可增删的文本行",
+      "en": "A list renders as repeatable text rows"
+    },
+    "default": ["general", "idea", "todo"]
+  },
+
+  "field_aliases": {
+    "type": "dict",
+    "label": { "zh": "字段别名", "en": "Field aliases" },
+    "hint": {
+      "zh": "dict 渲染成可增删的键值对",
+      "en": "A dict renders as editable key/value pairs"
+    },
+    "default": {
+      "body": "content",
+      "title": "subject"
+    }
+  },
+
+  "note_templates": {
+    "type": "template_list",
+    "label": { "zh": "笔记模板", "en": "Note templates" },
+    "hint": {
+      "zh": "template_list 的 items 描述每一行的子表单",
+      "en": "A template_list uses items to describe the sub-form of one row"
+    },
+    "items": {
+      "id": {
+        "type": "string",
+        "label": { "zh": "标识", "en": "Id" }
+      },
+      "title": {
+        "type": "string",
+        "label": { "zh": "标题", "en": "Title" }
+      },
+      "body": {
+        "type": "text",
+        "label": { "zh": "正文", "en": "Body" }
+      }
+    },
+    "default": [
+      {
+        "id": "decision",
+        "title": "Decision record",
+        "body": "Context:\nOptions:\nDecision:\nConsequences:"
+      }
+    ]
+  },
+
+  "seed_files": {
+    "type": "file",
+    "label": { "zh": "初始文件", "en": "Seed files" },
+    "hint": {
+      "zh": "file 的值也是一个列表；解析这些路径时请用 storage.resolve / storage.user_file",
+      "en": "A file value is a list too; resolve the paths with storage.resolve / storage.user_file"
+    },
+    "default": []
+  },
+
+  "schema_version": {
+    "type": "string",
+    "label": { "zh": "配置版本", "en": "Schema version" },
+    "hint": {
+      "zh": "invisible 字段不出现在表单里，但会进 plugin.config，适合放迁移标记",
+      "en": "An invisible field is hidden from the form but still lands in plugin.config - good for migration markers"
+    },
+    "invisible": true,
+    "default": "1"
+  }
+}
