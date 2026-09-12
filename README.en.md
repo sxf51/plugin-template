@@ -43,7 +43,7 @@ vocabulary like the `template_list` config type is left alone. After that:
 | `subagents.py` | Decorated and explicit registration, restricted tool views, `vote` node voting |
 | `web.py` | Two endpoint styles, GET/POST/PUT/DELETE, attachment upload/list/download/delete, binaries, SSE, the tool executor |
 | `pages/console/` | Sandboxed page using every bridge method, bilingual, light and dark |
-| `store.py` | Loading a module that is not one of the fixed names; Redis and file backends; upload extension vetting |
+| `store.py` | Loading a module that is not one of the fixed names; Redis and file backends; upload name and extension vetting |
 | `pyproject.toml` | ruff and pytest settings plus dev dependencies for standalone work; `package = false`, nothing to build |
 | `main.py` | Run the plugin without the dashboard: inspect, doctor, call, hook, web, serve, rename |
 | `tests/test_plugin_contract.py` | **Generic**: derived from the plugin's own declarations; copy it unchanged |
@@ -152,13 +152,19 @@ caller-supplied path through `resolve` or `user_file` before opening it.
 
 ## Uploads and deletion
 
-- The backend generates the name on disk. The client only influences the
-  extension, which must pass the `ALLOWED_EXTENSIONS` allow-list in `store.py`;
-  otherwise it falls back to the declared MIME type, then to `.bin`.
+- The file keeps the name the user uploaded, but the client's string is never
+  taken as sent. `safe_stem()` in `store.py` drops the directories, replaces
+  every character outside its allow-list, trims leading and trailing dots and
+  spaces, bounds the length, and steps around the Windows device names.
+- The extension is decided separately and must pass the `ALLOWED_EXTENSIONS`
+  allow-list; otherwise it falls back to the declared MIME type, then to `.bin`.
+  So `payroll.pdf.exe` lands as `payroll.pdf.pdf`, never as an executable.
+- A name already taken becomes `report (1).pdf`, then `report (2).pdf`. The name
+  is claimed with an exclusive create, not an `exists()` check, so two uploads
+  racing for one name cannot both be told it is free - and the filesystem, not a
+  second rule, decides whether `Report.pdf` and `report.pdf` are the same name.
 - The download Content-Type comes from the extension, not from the type the
   client claimed.
-- The client's original filename is stored in the index as the display name and
-  the save-dialog name, never as the filename on disk.
 - Deletion removes the index record and the bytes together — see
   `AttachmentStore.remove()` and `discard_files()`. `actions/prune` uses the
   same path.

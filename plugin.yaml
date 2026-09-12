@@ -1,344 +1,262 @@
-# =============================================================================
-# Plugin manifest. The host reads this before importing any of your Python, so
-# a mistake here is silent: the plugin still loads, the broken part just never
-# appears. Parsed by src/extension/plugin.py::_load_plugin_from_dir
-# =============================================================================
-
-# Globally unique id, kebab-case. Must match the directory name for repository
-# installs. Namespaces this plugin's web API, storage and page URLs.
 name: plugin-template
 version: 0.0.0
 description: Reference template that exercises every plugin extension point once
-
-# false registers nothing at all: no tools, hooks, subagents, endpoints or
-# SKILL.md. The management page shows the plugin with status `disabled`.
-enabled: false
-
-# Audit fields. The host adds `path` itself; values are stringified and shown
-# on the plugin detail page.
+enabled: true
 metadata:
   owner: capstone
   contact: capstone@example.com
   category: template
   purpose: reference
   license: MIT
-
-# Import name -> PEP 508 requirement, used only as a recovery path: when
-# importing a module raises ModuleNotFoundError for a declared import, the host
-# runs `uv pip install <requirement>` once and retries. requirements.txt is the
-# authoritative list.
-#
-# dependencies:
-#   httpx: "httpx>=0.28,<1"
+  repository: https://github.com/sxf51/plugin-template
 dependencies: {}
-
-# Lower the level of a noisy logger your dependency owns. Unknown level names
-# are dropped silently. Valid: TRACE DEBUG INFO SUCCESS WARNING ERROR CRITICAL.
-#
-# log_levels:
-#   urllib3: WARNING
-
-# ---------------------------------------------------------------------------
-# ui: what this plugin adds to the dashboard. No frontend build required.
-# Malformed entries are dropped rather than failing the load, so a widget that
-# never appears is usually a typo here.
-# ---------------------------------------------------------------------------
 ui:
-  # Pages you ship under pages/<name>/index.html. Each runs in a sandboxed
-  # iframe on an opaque origin and reaches the backend through the bridge the
-  # host injects.
   pages:
-    - name: console
-      title:
-        zh: 模板控制台
-        en: Template Console
-      description:
-        zh: 演示宿主页面桥接的每一个方法：调接口、上传、取二进制、下载、SSE、提示
-        en: Exercises every host page-bridge method - API calls, upload, binary, download, SSE, toast
-      # sidebar = its own left-nav entry; plugin = only on the detail page;
-      # hidden = reachable by URL only.
-      nav: sidebar
-      # Empty allows any authenticated user.
-      roles: []
-
-  # Panels the host renders from this manifest, pulling data from your own
-  # endpoints.
+  - name: console
+    title:
+      zh: 模板控制台
+      en: Template Console
+    description:
+      zh: 演示宿主页面桥接的每一个方法：调接口、上传、取二进制、下载、SSE、提示
+      en: Exercises every host page-bridge method - API calls, upload, binary, download,
+        SSE, toast
+    nav: sidebar
+    roles: []
   panels:
-    - id: overview
+  - id: overview
+    title:
+      zh: 模板总览
+      en: Template overview
+    description:
+      zh: 每种小部件各示范一次，数据全部来自本插件自己的 Web API
+      en: One of every widget type, all fed by this plugin's own web API
+    widgets:
+    - id: note-count
+      type: stat
       title:
-        zh: 模板总览
-        en: Template overview
-      description:
-        zh: 每种小部件各示范一次，数据全部来自本插件自己的 Web API
-        en: One of every widget type, all fed by this plugin's own web API
-      widgets:
-        # stat: reads one field out of a JSON body. `poll` is in seconds.
-        - id: note-count
-          type: stat
-          title:
-            zh: 笔记数
-            en: Notes
-          span: 3
-          unit: ""
-          hint_field: hint
-          source:
-            endpoint: stats
-            field: notes
-            poll: 15
-
-        - id: attachment-count
-          type: stat
-          title:
-            zh: 附件数
-            en: Attachments
-          span: 3
-          source:
-            endpoint: stats
-            field: attachments
-
-        - id: storage-backend
-          type: stat
-          title:
-            zh: 存储后端
-            en: Storage backend
-          span: 3
-          source:
-            endpoint: stats
-            field: backend
-
-        - id: plugin-version
-          type: stat
-          title:
-            zh: 版本
-            en: Version
-          span: 3
-          source:
-            endpoint: stats
-            field: version
-
-        # key-value: renders every entry of a flat object.
-        - id: runtime
-          type: key-value
-          title:
-            zh: 运行时上下文
-            en: Runtime context
-          span: 6
-          source:
-            endpoint: summary
-            poll: 60
-
-        # table: wants an array of objects. `columns` names and orders them.
-        - id: recent-notes
-          type: table
-          title:
-            zh: 最近笔记
-            en: Recent notes
-          span: 6
-          source:
-            endpoint: recent
-            poll: 20
-          columns:
-            - key: title
-              title:
-                zh: 标题
-                en: Title
-            - key: tag
-              title:
-                zh: 标签
-                en: Tag
-              width: 120
-            - key: created
-              title:
-                zh: 创建时间
-                en: Created
-              width: 180
-
-        # line-chart / bar-chart: same array, one x_field plus a series per line.
-        - id: daily-line
-          type: line-chart
-          title:
-            zh: 每日新增（折线）
-            en: Notes per day (line)
-          span: 6
-          x_field: day
-          series:
-            - field: notes
-              label:
-                zh: 笔记
-                en: Notes
-          source:
-            endpoint: series
-            poll: 60
-
-        - id: daily-bar
-          type: bar-chart
-          title:
-            zh: 每日新增（柱状）
-            en: Notes per day (bar)
-          span: 6
-          x_field: day
-          series:
-            - field: notes
-              label:
-                zh: 笔记
-                en: Notes
-          source:
-            endpoint: series
-            poll: 60
-
-        # log-stream: driven by source.sse instead of polling. The endpoint must
-        # emit `data: <line>` frames.
-        - id: activity
-          type: log-stream
-          title:
-            zh: 活动流
-            en: Activity stream
-          span: 6
-          max_lines: 120
-          source:
-            sse: events
-
-        # form: same field renderer as the plugin config form. Values are POSTed
-        # to `submit`.
-        - id: quick-note
-          type: form
-          title:
-            zh: 快速记一条
-            en: Quick note
-          span: 6
-          submit: notes
-          schema:
-            title:
-              type: string
-              label:
-                zh: 标题
-                en: Title
-              default: ""
-            body:
-              type: text
-              label:
-                zh: 内容
-                en: Body
-              default: ""
-
-        # action: a button that POSTs to source.endpoint, with a confirm step.
-        - id: prune
-          type: action
-          span: 3
-          tone: warning
+        zh: 笔记数
+        en: Notes
+      span: 3
+      unit: ''
+      hint_field: hint
+      source:
+        endpoint: stats
+        field: notes
+        poll: 15
+    - id: attachment-count
+      type: stat
+      title:
+        zh: 附件数
+        en: Attachments
+      span: 3
+      source:
+        endpoint: stats
+        field: attachments
+    - id: storage-backend
+      type: stat
+      title:
+        zh: 存储后端
+        en: Storage backend
+      span: 3
+      source:
+        endpoint: stats
+        field: backend
+    - id: plugin-version
+      type: stat
+      title:
+        zh: 版本
+        en: Version
+      span: 3
+      source:
+        endpoint: stats
+        field: version
+    - id: runtime
+      type: key-value
+      title:
+        zh: 运行时上下文
+        en: Runtime context
+      span: 6
+      source:
+        endpoint: summary
+        poll: 60
+    - id: recent-notes
+      type: table
+      title:
+        zh: 最近笔记
+        en: Recent notes
+      span: 6
+      source:
+        endpoint: recent
+        poll: 20
+      columns:
+      - key: title
+        title:
+          zh: 标题
+          en: Title
+      - key: tag
+        title:
+          zh: 标签
+          en: Tag
+        width: 120
+      - key: created
+        title:
+          zh: 创建时间
+          en: Created
+        width: 180
+    - id: daily-line
+      type: line-chart
+      title:
+        zh: 每日新增（折线）
+        en: Notes per day (line)
+      span: 6
+      x_field: day
+      series:
+      - field: notes
+        label:
+          zh: 笔记
+          en: Notes
+      source:
+        endpoint: series
+        poll: 60
+    - id: daily-bar
+      type: bar-chart
+      title:
+        zh: 每日新增（柱状）
+        en: Notes per day (bar)
+      span: 6
+      x_field: day
+      series:
+      - field: notes
+        label:
+          zh: 笔记
+          en: Notes
+      source:
+        endpoint: series
+        poll: 60
+    - id: activity
+      type: log-stream
+      title:
+        zh: 活动流
+        en: Activity stream
+      span: 6
+      max_lines: 120
+      source:
+        sse: events
+    - id: quick-note
+      type: form
+      title:
+        zh: 快速记一条
+        en: Quick note
+      span: 6
+      submit: notes
+      schema:
+        title:
+          type: string
           label:
-            zh: 清理旧记录
-            en: Prune old records
-          confirm:
-            zh: 将删除超出保留上限的笔记与附件（含磁盘文件），确定继续？
-            en: Notes and attachments beyond the retention limit are deleted, files included. Continue?
-          source:
-            endpoint: actions/prune
+            zh: 标题
+            en: Title
+          default: ''
+        body:
+          type: text
+          label:
+            zh: 内容
+            en: Body
+          default: ''
+    - id: prune
+      type: action
+      span: 3
+      tone: warning
+      label:
+        zh: 清理旧记录
+        en: Prune old records
+      confirm:
+        zh: 将删除超出保留上限的笔记与附件（含磁盘文件），确定继续？
+        en: Notes and attachments beyond the retention limit are deleted, files included.
+          Continue?
+      source:
+        endpoint: actions/prune
+    - id: help
+      type: markdown
+      span: 9
+      content: 'Copy this directory to start a plugin. Rename it, rename `name:`
 
-        # markdown: static `content`, or the endpoint body when omitted.
-        - id: help
-          type: markdown
-          span: 9
-          content: |
-            Copy this directory to start a plugin. Rename it, rename `name:`
-            above, rename the `template_*` tools and `/template-*` commands,
-            then delete whatever you do not need.
+        above, rename the `template_*` tools and `/template-*` commands,
 
-# ---------------------------------------------------------------------------
-# config: defaults your Python reads as `plugin.config`.
-#
-#   plugin.config = {**this block, **values saved from _conf_schema.json}
-#
-# A key declared in _conf_schema.json wins over the same key here, so do not
-# write one key in both places. User-editable settings go in the schema;
-# commands and tool_access stay here.
-# ---------------------------------------------------------------------------
+        then delete whatever you do not need.
+
+        '
 config:
-  # Slash commands, collected by src/runtime/command_catalog.py. A command is
-  # dropped silently when: the name does not start with "/", it collides with a
-  # core command, route is neither task nor tool, priority is not an int,
-  # route=tool and `tool` is not registered, or `requires_tool` is not
-  # registered. A command missing from /help failed one of those.
   commands:
-    - command: /template-note
-      usage: /template-note <text>
-      description: Save a note through a decorated class tool
-      priority: 40 # 5-20 critical, 21-50 regular, 51+ utility
-      level: 1 # permission level, mirrors the core command table
-      route: tool
-      tool: template_note_tool
-      requires_tool: template_note_tool
-
-    - command: /template-notes
-      usage: /template-notes
-      description: List saved notes through a second decorated class tool
-      priority: 41
-      level: 1
-      route: tool
-      tool: template_notes_tool
-      requires_tool: template_notes_tool
-
-    - command: /template-format
-      usage: /template-format <text>
-      description: Normalise note text through a decorated function tool, no storage involved
-      priority: 44
-      level: 1
-      route: tool
-      tool: template_format_tool
-      requires_tool: template_format_tool
-
-    - command: /template-status
-      usage: /template-status
-      description: Inspect non-secret runtime state through an explicitly registered tool
-      priority: 42
-      level: 1
-      route: tool
-      tool: template_status_tool
-      requires_tool: template_status_tool
-
-    - command: /template-llm
-      usage: /template-llm <question>
-      description: Show the LLM config the host resolved for this plugin
-      priority: 43
-      level: 2
-      route: tool
-      tool: template_llm_tool
-      requires_tool: template_llm_tool
-
-    # route=task hands the request to the planner instead of one tool.
-    # planner_hints are soft preferences the planner may weigh.
-    - command: /template-outline
-      usage: /template-outline <topic>
-      description: Route an outline request through the template subagent
-      priority: 39
-      level: 2
-      route: task
-      requires_tool: template_notes_tool
-      planner_hints:
-        preferred_route: subagent
-        preferred_subagent: template_note_curator
-        fallback_route: tool
-        fallback_tool: template_notes_tool
-
-  # Which subagents may see which tool. Intersected with each tool's own
-  # @plugin_tool(allowed_subagents=...) and with runtime.subagent_tool_access in
-  # config.yaml, so the host can tighten this but never widen it.
+  - command: /template-note
+    usage: /template-note <text>
+    description: Save a note through a decorated class tool
+    priority: 40
+    level: 1
+    route: tool
+    tool: template_note_tool
+    requires_tool: template_note_tool
+  - command: /template-notes
+    usage: /template-notes
+    description: List saved notes through a second decorated class tool
+    priority: 41
+    level: 1
+    route: tool
+    tool: template_notes_tool
+    requires_tool: template_notes_tool
+  - command: /template-format
+    usage: /template-format <text>
+    description: Normalise note text through a decorated function tool, no storage
+      involved
+    priority: 44
+    level: 1
+    route: tool
+    tool: template_format_tool
+    requires_tool: template_format_tool
+  - command: /template-status
+    usage: /template-status
+    description: Inspect non-secret runtime state through an explicitly registered
+      tool
+    priority: 42
+    level: 1
+    route: tool
+    tool: template_status_tool
+    requires_tool: template_status_tool
+  - command: /template-llm
+    usage: /template-llm <question>
+    description: Show the LLM config the host resolved for this plugin
+    priority: 43
+    level: 2
+    route: tool
+    tool: template_llm_tool
+    requires_tool: template_llm_tool
+  - command: /template-outline
+    usage: /template-outline <topic>
+    description: Route an outline request through the template subagent
+    priority: 39
+    level: 2
+    route: task
+    requires_tool: template_notes_tool
+    planner_hints:
+      preferred_route: subagent
+      preferred_subagent: template_note_curator
+      fallback_route: tool
+      fallback_tool: template_notes_tool
   tool_access:
     template_note_tool:
       allowed_subagents:
-        - template_note_curator
+      - template_note_curator
     template_notes_tool:
       allowed_subagents:
-        - template_note_curator
-        - template_note_reviewer
+      - template_note_curator
+      - template_note_reviewer
     template_format_tool:
       allowed_subagents:
-        - template_note_curator
-        - template_note_reviewer
+      - template_note_curator
+      - template_note_reviewer
     template_status_tool:
       allowed_subagents:
-        - template_note_curator
-        - template_note_reviewer
+      - template_note_curator
+      - template_note_reviewer
     template_llm_tool:
       allowed_subagents:
-        - template_note_curator
+      - template_note_curator

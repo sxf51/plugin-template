@@ -40,7 +40,7 @@ uv run python main.py doctor                # 确认没有漏掉的地方
 | `subagents.py` | 装饰器与显式两种子智能体注册、受限工具视图、`vote` 节点投票 |
 | `web.py` | 两种端点注册方式、GET/POST/PUT/DELETE、附件上传/列出/下载/删除、二进制、SSE、调用工具执行器 |
 | `pages/console/` | 沙箱页面，用满宿主桥接的每个方法，中英双语 + 明暗主题 |
-| `store.py` | 非固定模块名的模块如何加载；Redis 与文件两套后端；上传文件的扩展名校验 |
+| `store.py` | 非固定模块名的模块如何加载；Redis 与文件两套后端；上传文件的文件名与扩展名校验 |
 | `pyproject.toml` | 独立开发用的 ruff / pytest 配置与 dev 依赖；`package = false`，没有要构建的东西 |
 | `main.py` | 不开宿主也能跑插件：查看能力、体检、调工具、发钩子、打端点、开页面、改名 |
 | `tests/test_plugin_contract.py` | **通用**：从插件自己的声明推导，复制后一行不改 |
@@ -139,10 +139,14 @@ schema 的值会覆盖清单里的默认值。用户可改的放 schema，`comma
 
 ## 上传与删除
 
-- 落盘文件名由后端生成。客户端只影响扩展名，且要过 `store.py` 的 `ALLOWED_EXTENSIONS` 白名单；
-  不在白名单时按声明的 MIME 兜底，再兜底到 `.bin`。
+- 落盘保留用户上传时的文件名，但客户端给的字符串不会被原样使用：`store.py` 的 `safe_stem()`
+  去掉目录、把白名单外的字符换成 `_`、剥掉首尾的点和空格、限长，并避开 Windows 设备名。
+- 扩展名单独判定，要过 `ALLOWED_EXTENSIONS` 白名单；不在白名单时按声明的 MIME 兜底，
+  再兜底到 `.bin`。所以 `payroll.pdf.exe` 落盘是 `payroll.pdf.pdf`，不会是可执行文件。
+- 重名时自动让路：`report (1).pdf`、`report (2).pdf`。占名用的是独占创建而不是 `exists()`
+  判断，两个上传同时抢一个名字不会都被告知"没人用"；`Report.pdf` 与 `report.pdf` 算不算同名，
+  交给文件系统回答，不在代码里再写一条规则。
 - 下载回的 Content-Type 由扩展名决定，不回显客户端声明的类型。
-- 客户端原始文件名存进索引，用作展示名和下载保存名，不作为磁盘文件名。
 - 删除要同时删索引记录和磁盘字节，见 `AttachmentStore.remove()` 与 `discard_files()`；
   `actions/prune` 走同一条路。
 - 上传大小在页面和后端各限一次。页面那次只是提示，后端那次才生效。

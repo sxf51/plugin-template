@@ -453,14 +453,43 @@ def test_upload_rejects_what_it_should(host: Any, bundle: Any) -> None:
     assert _body(empty)["message"] == "empty_file"
 
 
-def test_upload_keeps_the_original_format(host: Any, bundle: Any) -> None:
+def test_upload_keeps_the_original_name_and_format(host: Any, bundle: Any) -> None:
     record = _upload(host, bundle, "alice", b"hello", filename="Q3 report.PDF", content_type="application/pdf")
     assert record["name"] == "Q3 report.pdf"
-    assert record["stored_name"].endswith(".pdf")
+    # The name the user chose is the name on disk, not a generated id.
+    assert record["stored_name"] == "Q3 report.pdf"
     assert record["content_type"] == "application/pdf"
     assert record["bytes"] == UPLOAD_BYTES
-    # The name on disk is generated, so it never echoes the client's.
-    assert "report" not in record["stored_name"]
+
+
+def test_upload_does_not_let_one_name_overwrite_another(host: Any, bundle: Any) -> None:
+    """The same name twice keeps both files; the later one is parenthesised."""
+    names = [
+        _upload(host, bundle, "alice", f"copy-{index}".encode(), filename="report.txt")["stored_name"]
+        for index in range(3)
+    ]
+    assert names == ["report.txt", "report (1).txt", "report (2).txt"]
+
+    listed = _body(_call(host, bundle, "attachments/list", username="alice"))
+    for index, name in enumerate(names):
+        record = next(item for item in listed if item["stored_name"] == name)
+        served = _call(host, bundle, "attachments/file", username="alice", query={"id": record["id"]})
+        assert Path(served.path).read_bytes() == f"copy-{index}".encode()
+
+    # Another user's identical name lives in their own directory, so it is free.
+    assert _upload(host, bundle, "bob", b"theirs", filename="report.txt")["stored_name"] == "report.txt"
+
+
+def test_upload_name_cannot_escape_or_name_a_device(host: Any, bundle: Any) -> None:
+    """The stem reaches disk only after the characters that matter are gone."""
+    for client_name, expected in (
+        ("../../etc/passwd.txt", "passwd.txt"),
+        ("a:b*c?.txt", "a_b_c_.txt"),
+        ("CON.txt", "_CON.txt"),
+        ("...txt", "upload.txt"),
+    ):
+        record = _upload(host, bundle, "carol", b"x", filename=client_name, content_type="text/plain")
+        assert record["stored_name"] == expected, client_name
 
 
 def test_upload_refuses_to_keep_a_dangerous_extension(host: Any, bundle: Any, plugin_dir: Path) -> None:
@@ -482,7 +511,7 @@ def test_upload_refuses_to_keep_a_dangerous_extension(host: Any, bundle: Any, pl
 
 def test_upload_falls_back_to_the_declared_type(host: Any, bundle: Any) -> None:
     record = _upload(host, bundle, "alice", b"\x89PNG", filename="clipboard", content_type="image/png")
-    assert record["stored_name"].endswith(".png")
+    assert record["stored_name"] == "clipboard.png"
     assert record["name"] == "clipboard.png"
 
 

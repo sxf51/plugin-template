@@ -220,9 +220,9 @@ def register_web_apis(web: Any, plugin: Any, runtime_context: dict[str, Any]) ->
         if not raw:
             return error_response("empty_file", 400)
         form = await request.form()
-        # The file keeps its original format, but the extension is vetted
-        # against an allow-list first and the name on disk is generated here -
-        # see extension_for() in store.py for why that distinction matters.
+        # The file keeps its original name and format, but neither is taken as
+        # sent: the extension is vetted against an allow-list and the stem is
+        # sanitised - see extension_for() and safe_stem() in store.py.
         record = attachments().add(
             request.username,
             getattr(upload, "filename", "") or str(form.get("filename") or ""),
@@ -248,8 +248,8 @@ def register_web_apis(web: Any, plugin: Any, runtime_context: dict[str, Any]) ->
         if path is None:
             # Indexed but missing on disk. Report it rather than 500ing.
             return error_response("attachment_file_missing", 410)
-        # file_response sets the download name; the stored name is an opaque id,
-        # so hand back the display name the index kept.
+        # file_response sets the download name. Take it from the index, not from
+        # the path: old records still on disk carry a generated stored name.
         return file_response(path, filename=str(record["name"]), media_type=str(record["content_type"]))
 
     async def delete_attachment(request: Any) -> Any:

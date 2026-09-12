@@ -31,6 +31,20 @@ MAX_TITLE = 120
 MAX_BODY = 4000
 MAX_FILENAME = 120
 MAX_EXTENSION = 12
+# How many `name (1)`, `name (2)`... variants to try before giving up on a
+# readable name and falling back to one the record id makes unique.
+MAX_DUPLICATES = 999
+# `CON.txt` still names the console device on Windows, whatever extension is
+# glued on, and opening it hangs instead of writing a file. Stems that collide
+# with a device name are pushed out of the way rather than kept.
+_WINDOWS_RESERVED = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{index}" for index in range(1, 10)),
+    *(f"LPT{index}" for index in range(1, 10)),
+}
 
 # Extensions this plugin is willing to keep, mapped to the type it will serve
 # them back as. An allow-list, not a deny-list: the stored name ends up in a
@@ -107,14 +121,20 @@ def content_type_for(suffix: str, declared: Any) -> str:
     return ALLOWED_EXTENSIONS.get(suffix, FALLBACK_TYPE)
 
 
-def display_name(client_name: Any, suffix: str) -> str:
-    """Build a readable original name, safe for a header or a download prompt.
+def safe_stem(client_name: Any) -> str:
+    """Reduce the client's filename to a stem that is safe to put on disk.
 
-    Kept as data next to the file, never used as the file's own name on disk.
+    The name is worth keeping - `a1b2c3d4.pdf` tells nobody what the file is -
+    but it arrives from a web page, so it is attacker-controlled. Directories
+    are stripped, every character outside the allow-list becomes `_`, leading
+    and trailing dots and spaces go, and the length is bounded. What survives
+    can name a file but cannot leave the directory it is written to.
     """
     raw = str(client_name or "").replace("\\", "/").rsplit("/", maxsplit=1)[-1]
     stem = _SAFE_NAME.sub("_", PurePosixPath(raw).stem).strip(" .")[:MAX_FILENAME]
-    return f"{stem or 'upload'}{suffix}"
+    if stem.upper() in _WINDOWS_RESERVED:
+        stem = f"_{stem}"
+    return stem or "upload"
 
 
 class _UserList:
@@ -301,17 +321,21 @@ class AttachmentStore(_UserList):
         return self._storage.dir("uploads", actor or "unknown")
 
     def add(self, actor: str, client_name: str, payload: bytes, content_type: str) -> dict[str, Any]:
-        """Store the bytes and index them, keeping the file's original format."""
+        """Store the bytes and index them, keeping name and format both."""
         record_id = uuid.uuid4().hex[:12]
         suffix = extension_for(client_name, content_type)
-        # The stored name is generated here; only the extension is taken from
-        # the caller, and only after `extension_for` has vetted it. The name the
-        # user typed is kept as data, for display and for the download filename.
-        stored_name = f"{record_id}{suffix}"
-        (self.directory(actor) / stored_name).write_bytes(payload)
+        # The extension is the caller's only after `extension_for` has vetted
+        # it; the stem is the caller's only after `safe_stem` has. Neither is
+        # taken as sent, and the two are recombined here rather than anywhere
+        # the client's string could survive intact.
+        stored_name = self._write_once(
+            self.directory(actor), safe_stem(client_name), suffix, record_id, payload
+        )
         record = {
             "id": record_id,
-            "name": display_name(client_name, suffix),
+            # Same string in both: the file on disk and the download prompt
+            # now show the user the name they uploaded.
+            "name": stored_name,
             "stored_name": stored_name,
             "content_type": content_type_for(suffix, content_type),
             "bytes": len(payload),
@@ -319,6 +343,34 @@ class AttachmentStore(_UserList):
         }
         self._mutate(actor, lambda items: [record, *items])
         return record
+
+    @staticmethod
+    def _write_once(
+        directory: Any, stem: str, suffix: str, record_id: str, payload: bytes
+    ) -> str:
+        """Write the bytes under the user's own name, stepping around clashes.
+
+        Uploading `report.pdf` twice must not let the second overwrite the
+        first, so a taken name becomes `report (1).pdf`, then `report (2).pdf`.
+        The name is claimed with an exclusive create rather than an `exists()`
+        check: two uploads racing for one name would both be told it is free.
+        Letting the filesystem answer also keeps the case rule right, since
+        Windows and macOS consider `Report.pdf` taken by `report.pdf` and Linux
+        does not.
+        """
+        for index in range(MAX_DUPLICATES + 1):
+            candidate = f"{stem}{suffix}" if index == 0 else f"{stem} ({index}){suffix}"
+            try:
+                with (directory / candidate).open("xb") as handle:
+                    handle.write(payload)
+            except FileExistsError:
+                continue
+            return candidate
+        # A thousand files sharing one name: stop counting and let the record
+        # id settle it, so an upload never fails over a naming detail.
+        candidate = f"{stem} ({record_id}){suffix}"
+        (directory / candidate).write_bytes(payload)
+        return candidate
 
     def path_for(self, actor: str, record: dict[str, Any]) -> Any | None:
         """Resolve a record's file, confirming it is really one of ours."""
