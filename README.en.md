@@ -319,9 +319,10 @@ uv run python .github/scripts/plugin_version.py --check
 
 On the other side, the dashboard's plugin detail page has a "Check for updates"
 button that runs a single `git ls-remote --tags` — no clone — and reports an
-update only when a published version is newer than the installed one. Users who
-named a tag when installing are pinned to it and are left alone until they
-explicitly move.
+update whenever the newest release differs from the installed version. Its
+Versions menu switches to any published release, so a plugin that broke can be
+rolled back; a rolled-back plugin is pinned there until another version is
+chosen.
 
 ## Verification inside the host repository
 
