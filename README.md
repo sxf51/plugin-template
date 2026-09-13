@@ -47,6 +47,8 @@ uv run python main.py doctor                # 确认没有漏掉的地方
 | `tests/test_plugin_template.py` | 本插件自己的行为，换成你自己的 |
 | `tests/conftest.py` | fixture 与后端选择 |
 | `tests/harness/` | 假宿主与开发工具，**复制后一行不改**（见下表） |
+| `.github/workflows/` | CI（每次推送跑 lint + 测试）与发版（版本号变了就自动打 tag 并发 Release），**复制后一行不改** |
+| `.github/scripts/plugin_version.py` | 版本号的唯一出处：校验 `plugin.yaml` 与 `pyproject.toml` 一致且可解析，供发版流程读取 |
 
 `tests/harness/` 里的东西都不认识本插件，复制后不用改：
 
@@ -250,6 +252,27 @@ uv run ruff check .
 `pages/` 的渲染和依赖版本比对同样只在宿主里验证。
 
 复制插件时 `tests/harness/` 要一起带走。
+
+## 发版
+
+宿主是按 **Git tag** 判断插件有没有更新的：一次发版就是一个名为 `v<plugin.yaml 里的 version>` 的 tag。
+只往分支上推代码不算发版，用户那边不会提示更新——这是刻意的，免得半成品提交被当成新版本推给所有人。
+
+所以流程只有一步：**改 `plugin.yaml` 的 `version`（`pyproject.toml` 同步改），合进默认分支**。
+
+`.github/workflows/release.yml` 随后自动完成剩下的事：读出版本号 → 该 tag 已存在就什么都不做 →
+不存在就先跑 lint 和测试 → 打 tag 并推上去 → 建 GitHub Release（`rc`/`a`/`b` 后缀会标成 prerelease）。
+测试没过就不会有 tag，也就不会有任何用户看到这个版本。
+
+版本号必须形如 `1.2.3`、`1.2.3rc1`、`1.2.3b2`，且两个文件里写的要一致，否则流程直接失败：
+
+```bash
+uv run python .github/scripts/plugin_version.py --check
+```
+
+用户侧对应的是插件详情页的「检查更新」——它只做一次 `git ls-remote --tags`，不会克隆仓库；
+只有发布的版本号比已装的新，才会出现「可更新」。安装时填了版本标签的用户会被锁定在那个 tag 上，
+不受新版本影响，直到他们显式换一个。
 
 ## 在宿主仓库内验证
 

@@ -50,6 +50,8 @@ vocabulary like the `template_list` config type is left alone. After that:
 | `tests/test_plugin_template.py` | This plugin's own behaviour; replace it with yours |
 | `tests/conftest.py` | Fixtures and the backend choice |
 | `tests/harness/` | The stand-in host and dev tooling, **copied unchanged** (see below) |
+| `.github/workflows/` | CI (lint and tests on every push) and Release (tags and publishes when the version changes), **copied unchanged** |
+| `.github/scripts/plugin_version.py` | The one place the version comes from: checks `plugin.yaml` and `pyproject.toml` agree and parse, and feeds the release workflow |
 
 Nothing under `tests/harness/` knows about this plugin, so it copies unchanged:
 
@@ -290,6 +292,34 @@ the host's AST pass; it skips rather than failing. Page rendering and dependency
 version resolution are likewise host-only.
 
 Copy `tests/harness/` along with the plugin.
+
+## Releasing
+
+The host decides whether a plugin has an update by looking at **Git tags**: a
+release is a tag named `v<version from plugin.yaml>`. Commits pushed to a branch
+are deliberately not a release, so work in progress never reaches users as an
+update prompt.
+
+That leaves one thing to do: **bump `version` in `plugin.yaml` (and
+`pyproject.toml` to match) and merge to the default branch.**
+
+`.github/workflows/release.yml` does the rest — read the version, do nothing if
+that tag already exists, otherwise run lint and the test suite, push the tag, and
+create the GitHub release (`rc`/`a`/`b` suffixes are marked as prereleases). A
+failing test means no tag, which means no user ever sees that version.
+
+Versions must look like `1.2.3`, `1.2.3rc1` or `1.2.3b2`, and the two files must
+agree, or the workflow stops:
+
+```bash
+uv run python .github/scripts/plugin_version.py --check
+```
+
+On the other side, the dashboard's plugin detail page has a "Check for updates"
+button that runs a single `git ls-remote --tags` — no clone — and reports an
+update only when a published version is newer than the installed one. Users who
+named a tag when installing are pinned to it and are left alone until they
+explicitly move.
 
 ## Verification inside the host repository
 
