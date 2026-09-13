@@ -280,7 +280,7 @@ def register_web_apis(web: Any, plugin: Any, runtime_context: dict[str, Any]) ->
         count = store().count(request.username)
         svg = (
             '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="72">'
-            '<rect width="240" height="72" rx="10" fill="#2f6feb"/>'
+            '<rect width="240" height="72" rx="10" fill="#18765d"/>'
             f'<text x="120" y="44" font-family="sans-serif" font-size="26" fill="#fff" '
             f'text-anchor="middle">{count} notes</text></svg>'
         )

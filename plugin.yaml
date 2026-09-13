@@ -1,14 +1,15 @@
 name: plugin-template
 version: 0.1.0
 description: Reference template that exercises every plugin extension point once
-enabled: false
+enabled: true
 metadata:
   owner: capstone
   contact: capstone@example.com
   category: template
   purpose: reference
   license: MIT
-  repository: https://github.com/sxf51/plugin-template
+  repository: https://github.com/sxf51/plugin-template.git
+  ref: v0.1.1
 dependencies: {}
 ui:
   pages:

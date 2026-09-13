@@ -8,6 +8,13 @@ A subagent is a class with one method:
 they are routing metadata, not documentation. Be specific: a subagent claiming
 `domain="general"` competes with everything.
 
+The human-readable summary is separate, and the dashboard shows it on the
+plugin's detail card. The host takes the first of these it finds:
+`metadata={"description": ...}` at registration, a `description` attribute on
+the instance, then the class docstring's first line. The two subagents below
+demonstrate the metadata form and the docstring form respectively - write one
+of them, or your agent shows up on the card as undocumented.
+
 Tool visibility is layered. A subagent sees a tool only if every layer allows
 it: the tool's own `allowed_subagents`, the subagent's `tools=(...)`,
 `config.tool_access` in plugin.yaml, and `runtime.subagent_tool_access` in the

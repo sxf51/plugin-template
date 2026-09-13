@@ -7,7 +7,9 @@
  * only looks right in light mode is half broken.
  *
  * The dashboard's own design tokens are not in scope here - the page is on a
- * separate origin with its own document. Declare what you need.
+ * separate origin with its own document. Declare what you need. Echoing the
+ * host's accent is worth the two lines, though: a page framed by the dashboard
+ * but wearing an unrelated accent colour reads as something bolted on.
  */
 
 :root {
@@ -16,7 +18,9 @@
   --text: #1b1f27;
   --muted: #6b7280;
   --border: #e3e6ec;
-  --accent: #2f6feb;
+  --accent: #18765d;
+  --accent-contrast: #ffffff;
+  --accent-soft: rgb(24 118 93 / 12%);
   --danger: #c0392b;
 }
 
@@ -26,7 +30,9 @@
   --text: #e8eaee;
   --muted: #9aa1ad;
   --border: #2b2f37;
-  --accent: #6ea0ff;
+  --accent: #53b895;
+  --accent-contrast: #10231d;
+  --accent-soft: rgb(83 184 149 / 16%);
   --danger: #e26d5c;
 }
 
@@ -36,7 +42,8 @@
 
 body {
   margin: 0;
-  padding: 20px;
+  /* Room to breathe on a monitor without wasting a phone's narrow width. */
+  padding: clamp(14px, 2.5vw, 28px);
   background: var(--bg);
   color: var(--text);
   font: 14px/1.55 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -71,7 +78,12 @@ body {
 main {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  /*
+   * `min(300px, 100%)` rather than a bare 300px: on a narrow phone the bare
+   * form keeps the track at its 300px minimum even when the page is only 290px
+   * wide, and every card hangs over the right edge.
+   */
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   margin-top: 16px;
 }
 
@@ -116,15 +128,39 @@ button {
   border: 1px solid transparent;
   border-radius: 8px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-contrast);
   font: inherit;
   cursor: pointer;
+  transition: filter 120ms ease, background-color 120ms ease;
+}
+
+button:hover {
+  filter: brightness(1.08);
 }
 
 button.ghost {
   background: transparent;
   border-color: var(--border);
   color: var(--text);
+}
+
+button.ghost:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  filter: none;
+}
+
+/* Keyboard users get the same affordance mouse users get from :hover. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input[type='text']:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
 button.link {
