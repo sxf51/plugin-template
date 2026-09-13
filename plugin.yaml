@@ -1,7 +1,7 @@
 name: plugin-template
 version: 0.1.0
 description: Reference template that exercises every plugin extension point once
-enabled: true
+enabled: false
 metadata:
   owner: capstone
   contact: capstone@example.com
