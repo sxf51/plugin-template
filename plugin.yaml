@@ -1,5 +1,5 @@
 name: plugin-template
-version: 0.1.0
+version: 0.1.1
 description: Reference template that exercises every plugin extension point once
 enabled: false
 metadata:
@@ -9,7 +9,6 @@ metadata:
   purpose: reference
   license: MIT
   repository: https://github.com/sxf51/plugin-template.git
-  ref: v0.1.1
 dependencies: {}
 ui:
   pages:

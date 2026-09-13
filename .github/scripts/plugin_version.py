@@ -47,25 +47,53 @@ def read_manifest_version() -> str:
     return version
 
 
-def read_project_version() -> str | None:
-    """Read pyproject's version, which exists only for the author's own tooling."""
+def reject_second_version() -> None:
+    """Refuse a static version in pyproject.toml.
+
+    uv insists a ``[project]`` table has a version, but accepts
+    ``dynamic = ["version"]`` for a virtual project and then leaves it out of
+    uv.lock. Keeping it that way means a release edits exactly one file. A
+    literal version creeping back in is a second copy that nothing keeps in step
+    with plugin.yaml, so it is an error rather than something to compare.
+    """
     pyproject = ROOT / "pyproject.toml"
     if not pyproject.is_file():
-        return None
-    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-    version = data.get("project", {}).get("version")
-    return str(version).strip() if version else None
+        return
+    project = tomllib.loads(pyproject.read_text(encoding="utf-8")).get("project", {})
+    if "version" in project:
+        raise SystemExit(
+            f"pyproject.toml declares version '{project['version']}'. The plugin's version lives only in "
+            'plugin.yaml; replace it with dynamic = ["version"].'
+        )
+
+
+# Written by the host's installer into its own copy of plugin.yaml: which tag it
+# checked out, and whether the user pinned it. They describe one installation,
+# not the plugin, and the host trusts `ref` over `version` when working out what
+# is installed - so a stale one committed here makes every checkout of this
+# repository misreport its own version.
+HOST_MANAGED_METADATA = ("ref", "pinned")
+
+
+def reject_install_state() -> None:
+    """Refuse installer-written metadata that leaked back into the source tree."""
+    manifest_path = next((ROOT / name for name in ("plugin.yaml", "plugin.yml") if (ROOT / name).is_file()), None)
+    if manifest_path is None:
+        return
+    metadata = (yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}).get("metadata") or {}
+    leaked = [key for key in HOST_MANAGED_METADATA if key in metadata]
+    if leaked:
+        raise SystemExit(
+            f"{manifest_path.name} metadata contains {', '.join(leaked)}, which the host writes when it installs "
+            "the plugin. Remove them - this usually means an installed copy was committed back."
+        )
 
 
 def resolve() -> tuple[str, str]:
     """Return the validated (version, tag) pair, or exit explaining what is wrong."""
+    reject_second_version()
+    reject_install_state()
     version = read_manifest_version()
-    project_version = read_project_version()
-    if project_version is not None and project_version != version:
-        raise SystemExit(
-            f"pyproject.toml version '{project_version}' does not match plugin.yaml version '{version}'. "
-            "plugin.yaml is what the host reads; bump both together."
-        )
     return version, f"v{version}"
 
 

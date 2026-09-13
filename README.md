@@ -48,7 +48,7 @@ uv run python main.py doctor                # 确认没有漏掉的地方
 | `tests/conftest.py` | fixture 与后端选择 |
 | `tests/harness/` | 假宿主与开发工具，**复制后一行不改**（见下表） |
 | `.github/workflows/` | CI（每次推送跑 lint + 测试）与发版（版本号变了就自动打 tag 并发 Release），**复制后一行不改** |
-| `.github/scripts/plugin_version.py` | 版本号的唯一出处：校验 `plugin.yaml` 与 `pyproject.toml` 一致且可解析，供发版流程读取 |
+| `.github/scripts/plugin_version.py` | 读取并校验 `plugin.yaml` 里的版本号，供发版流程使用；`pyproject.toml` 若写了静态版本号会直接报错 |
 
 `tests/harness/` 里的东西都不认识本插件，复制后不用改：
 
@@ -258,13 +258,13 @@ uv run ruff check .
 宿主是按 **Git tag** 判断插件有没有更新的：一次发版就是一个名为 `v<plugin.yaml 里的 version>` 的 tag。
 只往分支上推代码不算发版，用户那边不会提示更新——这是刻意的，免得半成品提交被当成新版本推给所有人。
 
-所以流程只有一步：**改 `plugin.yaml` 的 `version`（`pyproject.toml` 同步改），合进默认分支**。
+所以流程只有一步：**改 `plugin.yaml` 的 `version`，合进默认分支**。版本号只写在这一处——`pyproject.toml` 用的是 `dynamic = ["version"]`，`uv.lock` 里也不记录，发版不需要碰它们，tag 由流程自动打
 
 `.github/workflows/release.yml` 随后自动完成剩下的事：读出版本号 → 该 tag 已存在就什么都不做 →
 不存在就先跑 lint 和测试 → 打 tag 并推上去 → 建 GitHub Release（`rc`/`a`/`b` 后缀会标成 prerelease）。
 测试没过就不会有 tag，也就不会有任何用户看到这个版本。
 
-版本号必须形如 `1.2.3`、`1.2.3rc1`、`1.2.3b2`，且两个文件里写的要一致，否则流程直接失败：
+版本号必须形如 `1.2.3`、`1.2.3rc1`、`1.2.3b2`，否则流程直接失败：
 
 ```bash
 uv run python .github/scripts/plugin_version.py --check

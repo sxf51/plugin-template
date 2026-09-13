@@ -4,8 +4,8 @@
 # installation, and a tag that disagrees with the manifest misreports itself.
 #
 # This workflow removes both failure modes by making the manifest the trigger:
-# bump `version:` in plugin.yaml (and pyproject.toml), merge to the default
-# branch, and the tag plus the GitHub release are created for you - but only
+# bump `version:` in plugin.yaml - the only place it is declared - merge to the
+# default branch, and the tag plus the GitHub release are created for you - but only
 # after the same lint and tests CI runs pass.
 #
 # Nothing happens when the version is unchanged, so ordinary commits are free.

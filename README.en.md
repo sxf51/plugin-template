@@ -51,7 +51,7 @@ vocabulary like the `template_list` config type is left alone. After that:
 | `tests/conftest.py` | Fixtures and the backend choice |
 | `tests/harness/` | The stand-in host and dev tooling, **copied unchanged** (see below) |
 | `.github/workflows/` | CI (lint and tests on every push) and Release (tags and publishes when the version changes), **copied unchanged** |
-| `.github/scripts/plugin_version.py` | The one place the version comes from: checks `plugin.yaml` and `pyproject.toml` agree and parse, and feeds the release workflow |
+| `.github/scripts/plugin_version.py` | Reads and validates the version in `plugin.yaml` for the release workflow; fails if `pyproject.toml` declares a static version of its own |
 
 Nothing under `tests/harness/` knows about this plugin, so it copies unchanged:
 
@@ -300,16 +300,18 @@ release is a tag named `v<version from plugin.yaml>`. Commits pushed to a branch
 are deliberately not a release, so work in progress never reaches users as an
 update prompt.
 
-That leaves one thing to do: **bump `version` in `plugin.yaml` (and
-`pyproject.toml` to match) and merge to the default branch.**
+That leaves one thing to do: **bump `version` in `plugin.yaml` and merge to the
+default branch.** That is the only place the version is written: `pyproject.toml`
+uses `dynamic = ["version"]` and `uv.lock` does not record it, so neither is
+touched by a release, and the tag is created for you.
 
 `.github/workflows/release.yml` does the rest — read the version, do nothing if
 that tag already exists, otherwise run lint and the test suite, push the tag, and
 create the GitHub release (`rc`/`a`/`b` suffixes are marked as prereleases). A
 failing test means no tag, which means no user ever sees that version.
 
-Versions must look like `1.2.3`, `1.2.3rc1` or `1.2.3b2`, and the two files must
-agree, or the workflow stops:
+Versions must look like `1.2.3`, `1.2.3rc1` or `1.2.3b2`, or the workflow
+stops:
 
 ```bash
 uv run python .github/scripts/plugin_version.py --check
